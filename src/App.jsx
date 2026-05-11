@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { create } from 'zustand';
 import { 
-  Search, Plus, Sun, Moon, MoreHorizontal, 
-  User, MapPin, Activity, Phone, Mail, X, Trash2, Edit3
+  Search, Plus, Sun, Moon, MapPin, Activity, 
+  Phone, User, X, Trash2, Edit3 
 } from 'lucide-react';
 
-const UserListApp = () => {
-  const [users, setUsers] = useState([
+const useUserStore = create((set) => ({
+  users: [
     { id: 1, name: "Jacob Jones", email: "jackson.graham@example.com", city: "Dushanbe", status: "Inactive", phone: "88888 0090", img: "https://i.pravatar.cc/150?u=1" },
     { id: 2, name: "Jenny Wilson", email: "jessica.hanson@example.com", city: "Kulob", status: "Inactive", phone: "88888 0090", img: "https://i.pravatar.cc/150?u=2" },
     { id: 3, name: "Guy Hawkins", email: "bill.sanders@example.com", city: "Dushanbe", status: "Inactive", phone: "88888 0090", img: "https://i.pravatar.cc/150?u=3" },
@@ -14,14 +15,80 @@ const UserListApp = () => {
     { id: 6, name: "Kristin Watson", email: "kenzi.lawson@example.com", city: "Khujand", status: "Active", phone: "88888 0090", img: "https://i.pravatar.cc/150?u=6" },
     { id: 7, name: "Dianne Russell", email: "deanna.curtis@example.com", city: "Dushanbe", status: "Inactive", phone: "88888 0090", img: "https://i.pravatar.cc/150?u=7" },
     { id: 8, name: "Ronald Richards", email: "tim.jennings@example.com", city: "Hisor", status: "Active", phone: "88888 0090", img: "https://i.pravatar.cc/150?u=8" },
-  ]);
+  ],
+  darkMode: false,
+  searchTerm: "",
+  statusFilter: "All",
+  cityFilter: "All",
+  selectedUser: null,
+  showAddModal: false,
 
-  const [darkMode, setDarkMode] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [cityFilter, setCityFilter] = useState("All");
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
+  toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
+  setSearchTerm: (term) => set({ searchTerm: term }),
+  setStatusFilter: (status) => set({ statusFilter: status }),
+  setCityFilter: (city) => set({ cityFilter: city }),
+  setSelectedUser: (user) => set({ selectedUser: user }),
+  setShowAddModal: (show) => set({ showAddModal: show }),
+  
+  addUser: (newUser) => set((state) => ({ 
+    users: [newUser, ...state.users],
+    showAddModal: false 
+  })),
+  
+  deleteUser: (id) => set((state) => ({
+    users: state.users.filter(u => u.id !== id),
+    selectedUser: state.selectedUser?.id === id ? null : state.selectedUser
+  })),
+}));
+
+
+const UserRow = ({ user }) => {
+  const { setSelectedUser, deleteUser } = useUserStore();
+  
+  if (!user) return null;
+
+  return (
+    <tr 
+      onClick={() => setSelectedUser(user)}
+      className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
+    >
+      <td className="py-4 px-6 flex items-center gap-3">
+        <img src={user.img} alt="" className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700" />
+        <div>
+          <div className="font-semibold text-gray-900 dark:text-white">{user.name}</div>
+          <div className="text-sm text-gray-500">{user.email}</div>
+        </div>
+      </td>
+      <td className="py-4 px-6 text-gray-600 dark:text-gray-400">{user.city}</td>
+      <td className="py-4 px-6">
+        <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase ${
+          user.status === 'Active' ? 'bg-green-600 text-white' : 'bg-gray-400 text-white'
+        }`}>
+          {user.status}
+        </span>
+      </td>
+      <td className="py-4 px-6 text-gray-900 dark:text-gray-200 font-medium">{user.phone}</td>
+      <td className="py-4 px-6 text-right relative group">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteUser(user.id);
+          }} 
+          className="text-gray-300 hover:text-red-500 transition-colors"
+        >
+          <Trash2 size={18} />
+        </button>
+      </td>
+    </tr>
+  );
+};
+
+const UserListApp = () => {
+  const {
+    users, darkMode, toggleDarkMode, searchTerm, setSearchTerm,
+    statusFilter, setStatusFilter, cityFilter, setCityFilter,
+    selectedUser, setSelectedUser, showAddModal, setShowAddModal, addUser, deleteUser
+  } = useUserStore();
 
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
@@ -45,47 +112,8 @@ const UserListApp = () => {
       phone: "88888 0090",
       img: `https://i.pravatar.cc/150?u=${Date.now()}`
     };
-    setUsers([newUser, ...users]);
-    setFormName(""); setFormEmail(""); setShowAddModal(false);
-  };
-
-  const handleDelete = (id, e) => {
-    e?.stopPropagation();
-    setUsers(users.filter(u => u.id !== id));
-    if (selectedUser?.id === id) setSelectedUser(null);
-  };
-
-  const UserRow = ({ index }) => {
-    const user = filteredUsers[index];
-    if (!user) return null;
-    return (
-      <tr 
-        onClick={() => setSelectedUser(user)}
-        className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-      >
-        <td className="py-4 px-6 flex items-center gap-3">
-          <img src={user.img} alt="" className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700" />
-          <div>
-            <div className="font-semibold text-gray-900 dark:text-white">{user.name}</div>
-            <div className="text-sm text-gray-500">{user.email}</div>
-          </div>
-        </td>
-        <td className="py-4 px-6 text-gray-600 dark:text-gray-400">{user.city}</td>
-        <td className="py-4 px-6">
-          <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase ${
-            user.status === 'Active' ? 'bg-green-600 text-white' : 'bg-gray-400 text-white'
-          }`}>
-            {user.status}
-          </span>
-        </td>
-        <td className="py-4 px-6 text-gray-900 dark:text-gray-200 font-medium">{user.phone}</td>
-        <td className="py-4 px-6 text-right relative group">
-          <button onClick={(e) => handleDelete(user.id, e)} className="text-gray-300 hover:text-red-500 transition-colors">
-            <Trash2 size={18} />
-          </button>
-        </td>
-      </tr>
-    );
+    addUser(newUser);
+    setFormName(""); setFormEmail("");
   };
 
   return (
@@ -102,17 +130,16 @@ const UserListApp = () => {
               <Plus size={20} /> NEW
             </button>
             <div className="flex bg-gray-200 dark:bg-gray-800 p-1 rounded-xl">
-              <button onClick={() => setDarkMode(false)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${!darkMode ? 'bg-white shadow-md text-blue-600' : 'text-gray-500'}`}>
+              <button onClick={() => useUserStore.setState({darkMode: false})} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${!darkMode ? 'bg-white shadow-md text-blue-600' : 'text-gray-500'}`}>
                 <Sun size={16} /> <span className="text-xs font-bold">LIGHT</span>
               </button>
-              <button onClick={() => setDarkMode(true)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${darkMode ? 'bg-gray-700 text-white shadow-md' : 'text-gray-500'}`}>
+              <button onClick={() => useUserStore.setState({darkMode: true})} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${darkMode ? 'bg-gray-700 text-white shadow-md' : 'text-gray-500'}`}>
                 <Moon size={16} /> <span className="text-xs font-bold">DARK</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* FILTERS */}
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6 mb-8">
           <div className="md:col-span-3">
             <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest ml-1">Status</label>
@@ -133,7 +160,7 @@ const UserListApp = () => {
               onChange={(e) => setCityFilter(e.target.value)}
               className="w-full mt-1.5 bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-gray-800 p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="All">All cites</option>
+              <option value="All">All cities</option>
               <option value="Dushanbe">Dushanbe</option>
               <option value="Kulob">Kulob</option>
               <option value="Khujand">Khujand</option>
@@ -168,18 +195,9 @@ const UserListApp = () => {
               </tr>
             </thead>
             <tbody>
-              <UserRow index={0} />
-              <UserRow index={1} />
-              <UserRow index={2} />
-              <UserRow index={3} />
-              <UserRow index={4} />
-              <UserRow index={5} />
-              <UserRow index={6} />
-              <UserRow index={7} />
-              <UserRow index={8} />
-              <UserRow index={9} />
-              <UserRow index={10} />
-              <UserRow index={11} />
+              {filteredUsers.map((user) => (
+                <UserRow key={user.id} user={user} />
+              ))}
             </tbody>
           </table>
         </div>
@@ -211,14 +229,13 @@ const UserListApp = () => {
 
                 <div className="grid grid-cols-2 gap-3 w-full mt-12">
                   <button className="flex items-center justify-center gap-2 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl font-bold hover:bg-gray-200 transition-all"><Edit3 size={16}/> EDIT</button>
-                  <button onClick={() => handleDelete(selectedUser.id)} className="flex items-center justify-center gap-2 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-all"><Trash2 size={16}/> DELETE</button>
+                  <button onClick={() => deleteUser(selectedUser.id)} className="flex items-center justify-center gap-2 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-all"><Trash2 size={16}/> DELETE</button>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* CREATE MODAL */}
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
